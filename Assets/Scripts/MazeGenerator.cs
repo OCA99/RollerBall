@@ -111,15 +111,11 @@ public class MazeGenerator : MonoBehaviour
                 res += "\n";
             }
 
-            Debug.Log(res);
-
             res = "";
             foreach(Edge edge in edges)
             {
                 res += String.Format("{0},{1} -> {2},{3}\n", edge.a.x.ToString(), edge.a.y.ToString(), edge.b.x.ToString(), edge.b.y.ToString());
             }
-
-            Debug.Log(res);
         }
 
         public void ReplaceAllSet(int old, int new_)
@@ -175,6 +171,13 @@ public class MazeGenerator : MonoBehaviour
             }
         }
 
+        public Vector2Int PositionToCell(Vector3 position, int cellSize)
+        {
+            float offset = -(size - 1) * cellSize / 2;
+
+            return new Vector2Int(Mathf.RoundToInt((position.x - offset) / cellSize), Mathf.RoundToInt((position.z - offset) / cellSize));
+        }
+
         public void GenerateStartAndEnd(int cellSize)
         {
             float offset = -(size - 1) * cellSize / 2;
@@ -215,5 +218,10 @@ public class MazeGenerator : MonoBehaviour
     public Vector3 GetStartPosition()
     {
         return maze.start;
+    }
+
+    public Vector2Int PositionToCell(Vector3 position)
+    {
+        return maze.PositionToCell(position, cellSize);
     }
 }

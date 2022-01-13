@@ -13,15 +13,15 @@ behaviors:
       learning_rate_schedule: linear
     network_settings:
       normalize: false
-      hidden_units: 128
-      num_layers: 2
+      hidden_units: 256
+      num_layers: 3
       vis_encode_type: simple
       memory: null
       goal_conditioning_type: hyper
     reward_signals:
       extrinsic:
         gamma: 0.99
-        strength: 1.0
+        strength: 0.8
         network_settings:
           normalize: false
           hidden_units: 128
@@ -29,6 +29,18 @@ behaviors:
           vis_encode_type: simple
           memory: null
           goal_conditioning_type: hyper
+      curiosity:
+        gamma: 0.99
+        strength: 0.9
+        network_settings:
+          normalize: false
+          hidden_units: 128
+          num_layers: 2
+          vis_encode_type: simple
+          memory: null
+          goal_conditioning_type: hyper
+        learning_rate: 0.0003
+        encoding_size: null
     init_path: null
     keep_checkpoints: 5
     checkpoint_interval: 500000
