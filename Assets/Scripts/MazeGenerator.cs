@@ -12,7 +12,7 @@ public class MazeGenerator : MonoBehaviour
 
     private Maze maze;
 
-    class Cell
+    public class Cell
     {
         public int x, y;
         public int set;
@@ -25,7 +25,7 @@ public class MazeGenerator : MonoBehaviour
         }
     }
 
-    class Edge
+    public class Edge
     {
         public Cell a;
         public Cell b;
@@ -171,11 +171,23 @@ public class MazeGenerator : MonoBehaviour
             }
         }
 
-        public Vector2Int PositionToCell(Vector3 position, int cellSize)
+        public Cell PositionToCell(Vector3 position, int cellSize)
         {
             float offset = -(size - 1) * cellSize / 2;
 
-            return new Vector2Int(Mathf.RoundToInt((position.x - offset) / cellSize), Mathf.RoundToInt((position.z - offset) / cellSize));
+            Vector2Int pos = new Vector2Int(Mathf.RoundToInt((position.x - offset) / cellSize), Mathf.RoundToInt((position.z - offset) / cellSize));
+            foreach (List<Cell> row in cells)
+            {
+                foreach(Cell cell in row)
+                {
+                    if (cell.x == pos.x && cell.y == pos.y)
+                    {
+                        return cell;
+                    }
+                }
+            }
+
+            return null;
         }
 
         public void GenerateStartAndEnd(int cellSize)
@@ -199,7 +211,7 @@ public class MazeGenerator : MonoBehaviour
         maze.Print();
         maze.GenerateMesh(cellSize, gameObject, wall);
         maze.GenerateStartAndEnd(cellSize);
-        floor.transform.localScale = new Vector3(mazeSize / 2, 1, mazeSize / 2);
+        floor.transform.localScale = new Vector3((float)mazeSize / 2.0f, 1, (float)mazeSize / 2.0f);
     }
 
     public void ClearMaze()
@@ -220,8 +232,56 @@ public class MazeGenerator : MonoBehaviour
         return maze.start;
     }
 
-    public Vector2Int PositionToCell(Vector3 position)
+    public Cell PositionToCell(Vector3 position)
     {
         return maze.PositionToCell(position, cellSize);
+    }
+
+    public List<Cell> GetAdjacentCells(Cell cell)
+    {
+        return maze.GetAdjacentCells(cell);
+    }
+
+    public List<Cell> RemoveWallAdjacencies(Cell center, List<Cell> adjacent)
+    {
+        HashSet<Cell> allCells = new HashSet<Cell>();
+        HashSet<Cell> removedCells = new HashSet<Cell>();
+
+        foreach(Cell cell in adjacent)
+        {
+            allCells.Add(cell);
+            foreach(Edge edge in maze.edges)
+            {
+                if (edge.a == center && edge.b == cell)
+                {
+                    removedCells.Add(cell);
+                }
+
+                if (edge.a == cell && edge.b == center)
+                {
+                    removedCells.Add(cell);
+                }
+            }
+        }
+
+        foreach(Cell cell in removedCells)
+        {
+            allCells.Remove(cell);
+        }
+        
+        adjacent.Clear();
+        foreach(Cell cell in allCells)
+        {
+            adjacent.Add(cell);
+        }
+
+        return adjacent;
+    }
+
+    public Vector3 CellToPosition(Cell cell)
+    {
+        float offset = -(mazeSize - 1) * cellSize / 2;
+
+        return new Vector3(cell.x * cellSize + offset, 0.5f, cell.y * cellSize + offset);
     }
 }

@@ -17,10 +17,10 @@ behaviors:
     reward_signals:
       extrinsic:
         gamma: 0.99
-        strength: 0.8
+        strength: 0.5
       curiosity:
-        strength: 0.9
         gamma: 0.99
+        strength: 0.5
     max_steps: 500000
     time_horizon: 64
     summary_freq: 10000

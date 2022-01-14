@@ -18,14 +18,18 @@ public class RollerAgent : Agent
     public Text frameCounter;
     public Text cellCounter;
 
-    HashSet<Vector2Int> visitedCells = new HashSet<Vector2Int> ();
-    Vector2Int lastCell;
+    HashSet<MazeGenerator.Cell> visitedCells = new HashSet<MazeGenerator.Cell> ();
+    MazeGenerator.Cell lastCell;
+
+    Vector3 closestJunction;
 
     float reward = 0.0f;
 
     void Start()
     {
         rBody = GetComponent<Rigidbody>();
+        mazeGenerator.GenerateMaze();
+
     }
 
     private void Update()
@@ -35,14 +39,39 @@ public class RollerAgent : Agent
 
         if (lastCell != mazeGenerator.PositionToCell(transform.localPosition))
         {
-            reward -= 0.04f;
+            //reward -= 0.04f;
             lastCell = mazeGenerator.PositionToCell(transform.localPosition);
             if (!visitedCells.Contains(lastCell))
             {
+                reward += 2.0f;
                 visitedCells.Add(lastCell);
             } else
             {
-                reward -= 0.25f;
+                //reward -= 0.25f;
+            }
+        }
+
+        HashSet<MazeGenerator.Cell> closeJunctions = new HashSet<MazeGenerator.Cell>();
+        foreach (MazeGenerator.Cell cell in visitedCells)
+        {
+            List<MazeGenerator.Cell> adjacent = mazeGenerator.GetAdjacentCells(cell);
+            adjacent = mazeGenerator.RemoveWallAdjacencies(cell, adjacent);
+
+            foreach(MazeGenerator.Cell adj in adjacent)
+            {
+                if (!visitedCells.Contains(adj))
+                {
+                    closeJunctions.Add(cell);
+                }
+            }
+        }
+
+        closestJunction = Vector3.positiveInfinity;
+        foreach(MazeGenerator.Cell cell in closeJunctions)
+        {
+            if (Vector3.Distance(mazeGenerator.CellToPosition(cell), transform.localPosition) < Vector3.Distance(closestJunction, transform.localPosition))
+            {
+                closestJunction = mazeGenerator.CellToPosition(cell);
             }
         }
     }
@@ -60,8 +89,8 @@ public class RollerAgent : Agent
             this.transform.localPosition = new Vector3(0, 0.5f, 0);
         }
 
-        mazeGenerator.ClearMaze();
-        mazeGenerator.GenerateMaze();
+        //mazeGenerator.ClearMaze();
+        //mazeGenerator.GenerateMaze();
 
         this.transform.localPosition = mazeGenerator.GetStartPosition();
         target.localPosition = mazeGenerator.GetTargetPosition();
@@ -70,6 +99,9 @@ public class RollerAgent : Agent
 
         lastCell = mazeGenerator.PositionToCell(transform.localPosition);
         visitedCells.Clear();
+        visitedCells.Add(lastCell);
+
+        closestJunction = transform.localPosition;
 
         reward = 0.0f;
     }
@@ -84,28 +116,43 @@ public class RollerAgent : Agent
         sensor.AddObservation(rBody.velocity.x);
         sensor.AddObservation(rBody.velocity.z);
 
-        sensor.AddObservation(Time.frameCount - lastPositionTime);
+        //sensor.AddObservation(Time.frameCount - lastPositionTime);
+
+        float n = -1;
+        float s = -1;
+        float e = -1;
+        float w = -1;
 
         RaycastHit hit;
         if (Physics.Raycast(transform.localPosition, Vector3.forward, out hit) && hit.collider.gameObject.tag == "wall")
-            sensor.AddObservation(hit.distance);
-        else
-            sensor.AddObservation(-1);
+            n = hit.distance;
 
         if (Physics.Raycast(transform.localPosition, -Vector3.forward, out hit) && hit.collider.gameObject.tag == "wall")
-            sensor.AddObservation(hit.distance);
-        else
-            sensor.AddObservation(-1);
+            s = hit.distance;
 
         if (Physics.Raycast(transform.localPosition, Vector3.right, out hit) && hit.collider.gameObject.tag == "wall")
-            sensor.AddObservation(hit.distance);
-        else
-            sensor.AddObservation(-1);
+            w = hit.distance;
 
         if (Physics.Raycast(transform.localPosition, -Vector3.right, out hit) && hit.collider.gameObject.tag == "wall")
-            sensor.AddObservation(hit.distance);
-        else
-            sensor.AddObservation(-1);
+            e = hit.distance;
+
+        float sum = 0;
+        if (n > 0) sum += n;
+        if (s > 0) sum += s;
+        if (e > 0) sum += e;
+        if (w > 0) sum += w;
+
+        if (n > 0) n /= sum;
+        if (s > 0) s /= sum;
+        if (e > 0) e /= sum;
+        if (w > 0) w /= sum;
+
+        sensor.AddObservation(n);
+        sensor.AddObservation(s);
+        sensor.AddObservation(e);
+        sensor.AddObservation(w);
+
+        //sensor.AddObservation(closestJunction);
     }
 
     public float forceMultiplier = 10;
@@ -118,11 +165,16 @@ public class RollerAgent : Agent
         controlSignal.z = actionBuffers.ContinuousActions[1];
         rBody.AddForce(controlSignal * forceMultiplier);
 
-        SetReward(reward);
+        AddReward(reward);
+        reward = 0;
+
+        //AddReward(-0.01f);
 
         // Rewards
         float distanceToTarget = Vector3.Distance(this.transform.localPosition, target.localPosition);
-        float distanceToTargetReward = ((mazeGenerator.mazeSize * mazeGenerator.cellSize) / distanceToTarget) / (mazeGenerator.mazeSize * mazeGenerator.cellSize) * 10f;
+        //float distanceToTargetReward = ((mazeGenerator.mazeSize * mazeGenerator.cellSize) / distanceToTarget) / (mazeGenerator.mazeSize * mazeGenerator.cellSize) * 10f;
+
+        //AddReward(-distanceToTarget / (mazeGenerator.mazeSize * mazeGenerator.cellSize));
 
         // Reached target
         if (distanceToTarget < 3f)
@@ -134,33 +186,29 @@ public class RollerAgent : Agent
         // Fell off platform
         else if (this.transform.localPosition.y < 0)
         {
-            SetReward(-10.0f);
-            reward = 0;
-            reward += visitedCells.Count / (mazeGenerator.mazeSize);
-            AddReward(reward);
+            //SetReward(-10.0f);
+            //reward = 0;
+            //reward += visitedCells.Count / (mazeGenerator.mazeSize);
+            AddReward(-30.0f);
             EndEpisode();
         }
 
-        if (Vector3.Distance(lastPosition, transform.localPosition) < 2 && Time.frameCount - lastPositionTime > 50)
+        if (Time.frameCount - lastPositionTime > 300)
         {
-            SetReward(-10.0f);
-            reward = 0;
-            reward += visitedCells.Count / (mazeGenerator.mazeSize) * 5;
-            AddReward(reward);
+            //SetReward(-10.0f);
+            //reward = 0;
+            //reward += visitedCells.Count / (mazeGenerator.mazeSize) * 5;
+            //AddReward(reward);
             EndEpisode();
-        } else if(Vector3.Distance(lastPosition, transform.localPosition) > 2)
-        {
-            lastPosition = transform.localPosition;
-            lastPositionTime = Time.frameCount;
         }
 
         if (reward < -0.5f * mazeGenerator.mazeSize)
         {
-            reward = 0;
-            reward += visitedCells.Count / (mazeGenerator.mazeSize) * 5;
-            AddReward(reward);
+            //reward = 0;
+            //reward += visitedCells.Count / (mazeGenerator.mazeSize) * 5;
+            //AddReward(reward);
             //AddReward(distanceToTargetReward);
-            EndEpisode();
+            //EndEpisode();
         }
     }
 
@@ -175,7 +223,13 @@ public class RollerAgent : Agent
     {
         if (collision.other.tag == "wall")
         {
-            reward -= 0.75f;
+            //reward -= 0.75f;
         }
+    }
+    void OnDrawGizmos()
+    {
+        // Draw a yellow sphere at the transform's position
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawSphere(closestJunction, 1);
     }
 }

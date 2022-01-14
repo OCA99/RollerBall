@@ -21,7 +21,7 @@ behaviors:
     reward_signals:
       extrinsic:
         gamma: 0.99
-        strength: 0.8
+        strength: 0.5
         network_settings:
           normalize: false
           hidden_units: 128
@@ -31,7 +31,7 @@ behaviors:
           goal_conditioning_type: hyper
       curiosity:
         gamma: 0.99
-        strength: 0.9
+        strength: 0.5
         network_settings:
           normalize: false
           hidden_units: 128
