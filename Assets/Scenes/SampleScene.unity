@@ -949,7 +949,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 15
+    VectorObservationSize: 8
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 2
@@ -998,6 +998,8 @@ MonoBehaviour:
   MaxStep: 0
   frameCounter: {fileID: 1759635181}
   cellCounter: {fileID: 1377978941}
+  maxIterations: 400
+  currentIterations: 0
   target: {fileID: 364621953}
   mazeGenerator: {fileID: 926622567}
   forceMultiplier: 10

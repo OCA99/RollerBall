@@ -23,6 +23,9 @@ public class RollerAgent : Agent
 
     Vector3 closestJunction;
 
+    public int maxIterations = 300;
+    public int currentIterations = 0;
+
     float reward = 0.0f;
 
     void Start()
@@ -34,7 +37,7 @@ public class RollerAgent : Agent
 
     private void Update()
     {
-        frameCounter.text = (Time.frameCount - lastPositionTime).ToString();
+        frameCounter.text = currentIterations.ToString();
         cellCounter.text = visitedCells.Count.ToString();
 
         if (lastCell != mazeGenerator.PositionToCell(transform.localPosition))
@@ -43,7 +46,7 @@ public class RollerAgent : Agent
             lastCell = mazeGenerator.PositionToCell(transform.localPosition);
             if (!visitedCells.Contains(lastCell))
             {
-                reward += 2.0f;
+                AddReward(0.3f);
                 visitedCells.Add(lastCell);
             } else
             {
@@ -103,6 +106,8 @@ public class RollerAgent : Agent
 
         closestJunction = transform.localPosition;
 
+        currentIterations = 0;
+
         reward = 0.0f;
     }
 
@@ -116,7 +121,7 @@ public class RollerAgent : Agent
         sensor.AddObservation(rBody.velocity.x);
         sensor.AddObservation(rBody.velocity.z);
 
-        //sensor.AddObservation(Time.frameCount - lastPositionTime);
+        /*//sensor.AddObservation(Time.frameCount - lastPositionTime);
 
         float n = -1;
         float s = -1;
@@ -152,7 +157,7 @@ public class RollerAgent : Agent
         sensor.AddObservation(e);
         sensor.AddObservation(w);
 
-        //sensor.AddObservation(closestJunction);
+        //sensor.AddObservation(closestJunction);*/
     }
 
     public float forceMultiplier = 10;
@@ -165,8 +170,8 @@ public class RollerAgent : Agent
         controlSignal.z = actionBuffers.ContinuousActions[1];
         rBody.AddForce(controlSignal * forceMultiplier);
 
-        AddReward(reward);
-        reward = 0;
+        //AddReward(reward);
+        //reward = 0;
 
         //AddReward(-0.01f);
 
@@ -179,7 +184,7 @@ public class RollerAgent : Agent
         // Reached target
         if (distanceToTarget < 3f)
         {
-            SetReward(50.0f);
+            AddReward(10.0f);
             EndEpisode();
         }
 
@@ -189,11 +194,18 @@ public class RollerAgent : Agent
             //SetReward(-10.0f);
             //reward = 0;
             //reward += visitedCells.Count / (mazeGenerator.mazeSize);
-            AddReward(-30.0f);
+            AddReward(-10.0f);
             EndEpisode();
         }
 
-        if (Time.frameCount - lastPositionTime > 300)
+        currentIterations++;
+        if (currentIterations > maxIterations)
+        {
+            AddReward(-1.0f);
+            EndEpisode();
+        }
+
+        /*if (Time.frameCount - lastPositionTime > 300)
         {
             //SetReward(-10.0f);
             //reward = 0;
@@ -209,7 +221,7 @@ public class RollerAgent : Agent
             //AddReward(reward);
             //AddReward(distanceToTargetReward);
             //EndEpisode();
-        }
+        }*/
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
